@@ -1,0 +1,40 @@
+{
+  "name": "@agency/compat-core",
+  "version": "1.0.0",
+  "description": "Full-Sweep Dependency Optimizer: Multi-tier validation, recursive bisection, AST deprecation scanning, and zero runtime dependencies.",
+  "type": "module",
+  "main": "./src/index.js",
+  "bin": {
+    "compat-core": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test-local": "node ./bin/cli.js --sandbox"
+  },
+  "keywords": [
+    "dependency-manager",
+    "upgrade-tool",
+    "compatibility",
+    "nextjs",
+    "react",
+    "typescript",
+    "bisection",
+    "smoke-testing",
+    "ci-cd",
+    "zero-dependencies"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
