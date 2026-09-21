@@ -141,7 +141,7 @@ async function fetchPackageUpdate(name, declaredRange) {
 /**
  * Scans all dependencies inside package.json and finds updates using batched concurrent requests
  * @param {string} targetDir 
- * @returns {Promise<{ upgrades: Array, errors: Array }>}
+ * @returns {Promise<{ totalScanned: number, upToDate: number, upgrades: Array, errors: Array }>}
  */
 export async function scanRegistryUpdates(targetDir) {
   const packageJsonPath = path.join(targetDir, 'package.json');
@@ -157,7 +157,7 @@ export async function scanRegistryUpdates(targetDir) {
 
   console.log(`📡 Querying registry for ${depEntries.length} dependencies (Max concurrency: ${CONCURRENCY_LIMIT})...`);
 
-  const results = await mapConcurrent(depEntries, CONCURRENCY_LIMIT, async ({ name, range }) => {
+  const allResults = await mapConcurrent(depEntries, CONCURRENCY_LIMIT, async ({ name, range }) => {
     return await fetchPackageUpdate(name, range);
   });
 
