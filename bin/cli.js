@@ -34,22 +34,18 @@ const options = parseArgs();
 
 if (options.help) {
   console.log(`
-@agency/compat-core - Full-Sweep Dependency Optimizer
+compat-core - Autonomous Dependency Compatibility Engine
 
 Usage:
-  compat-core [options]
+  npx compat-core [options]
 
 Options:
-  --apply            Apply verified upgrades to package.json and lockfile
-  --restore          Undo the last applied upgrades, restoring package.json and lockfile
-  --sandbox          Run verification inside an OS temp directory instead of Git branching
-  --patch-only       Only evaluate patch/bugfix upgrades (e.g. 1.0.0 -> 1.0.1)
-  --minor-only       Only evaluate minor and patch upgrades (e.g. 1.0.0 -> 1.1.0)
-  --json             Output machine-readable JSON results to stdout
-  --fail-on-blocked  Exit with code 1 if any upgrades are blocked (for CI/CD gating)
-  --skip-tests       Skip execution of tests (Tier D) during validation
-  --ignore-scripts   Ignore lifecycle scripts during dependency installation
-  -h, --help         Show this help message
+  --apply           Apply verified upgrades to manifest and lockfile
+  --restore         Undo the last applied upgrades, restoring original files
+  --sandbox         Run verification inside an OS temp directory instead of Git branching
+  --skip-tests      Skip execution of test suites (Tier D)
+  --ignore-scripts  Ignore lifecycle scripts during dependency installation
+  -h, --help        Show this help message
   `);
   process.exit(0);
 }

@@ -1,233 +1,120 @@
-# @agency/compat-core
+# ⚡ compat-core
 
-> **Full-Sweep Dependency Optimizer & Compatibility Verification Engine**  
-> Test, isolate, and safely apply dependency upgrades using isolated sandboxes, multi-tier validation, recursive bisection, and AST-level deprecation analysis—with **zero runtime dependencies**.
+> Autonomous, multi-stack dependency compatibility engine featuring a 5-tier sandboxed validation pipeline, recursive bisection fault isolation, and AST-level breaking change scanning.
 
----
-
-## ⚡ The Problem with Traditional Upgrades
-
-Tools like `npm outdated`, `npm update`, or standard PR bots often cause breakage because:
-1. **Blind Version Bumps:** They bump package versions in `package.json` without verifying if your bundler, type-checker, or production runtime will actually succeed.
-2. **One-by-One PR Fatigue:** Managing dozens of individual upgrade PRs creates merge conflicts and excessive CI queue congestion.
-3. **Hidden Incompatibilities:** Updating package `A` might break peer package `B`, leaving developers to manually bisect and debug the breaking change.
-
-`compat-core` replaces guesswork with **deterministic execution**. It tests dependencies together in an isolated sandbox, validates across a 5-tier verification pipeline, bisects incompatible upgrades automatically down to the failing library, and verifies that deprecated APIs aren't being invoked in your source code.
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Zero Runtime Dependencies](https://img.shields.io/badge/runtime%20dependencies-0-success.svg)](#)
 
 ---
 
-## 🚀 Key Features
+## 🎯 The Problem
+Upgrading dependencies in modern production codebases is high-friction:
+- `npm audit fix` and automated bots blindly bump versions, frequently introducing subtle runtime regressions, peer-dependency conflicts, or broken builds.
+- Upgrading in batches makes isolating which specific package broke the build painful and time-consuming.
+- Syntax and typing can compile cleanly while still silently calling removed or deprecated APIs.
 
-* **🛡️ Zero Runtime Dependencies:** Built strictly with Node.js built-ins (`node:test`, `child_process`, `fs`, `net`, `os`) and uses your local TypeScript compiler.
-* **🧪 5-Tier Verification Pipeline:** Validates packages across Installation, TypeScript compilation, Production Bundling, Server Boot Smoke Testing, and Test Suites.
-* **🤖 Automated Route Crawler (Tier D Fallback):** If your project lacks unit tests, `compat-core` dynamically discovers Next.js App Router / Pages Router routes and verifies them against an ephemeral server using `node:test`.
-* **⚙️ Recursive Bisection Algorithm ($O(\log N)$):** If a "Big-Bang" full upgrade fails, the engine bisects atomic packages into halves to isolate exactly which package caused the failure.
-* **⛓️ Atomic Unit Coupling:** Couples interdependent packages (e.g. `react` + `react-dom`, `@nestjs/*`, `tailwindcss` + `postcss`, `@trpc/*`) so they are never upgraded or bisected into mismatched states.
-* **🔍 Deep AST Deprecation Scanner:** Spawns an in-memory TypeScript Compiler Program to detect `@deprecated` JSDoc symbols originating specifically from the upgraded libraries.
-* **📂 Non-Destructive Sandboxing:** Runs everything inside an OS temp directory (`--sandbox`) or temporary Git branches (`_compat-check-temp`), never altering your working tree during verification.
-* **💾 Instant Snapshot Rollbacks:** Includes snapshot-based backups (`.compat-backup.json`) with an instant `--restore` command.
-* **⚡ Throttled Registry Engine:** Queries npm using lightweight abbreviated packuments (`application/vnd.npm.install-v1+json`) with concurrency limits and exponential backoff.
-* **🤖 CI/CD Ready:** Native `--json` output, `--fail-on-blocked` exit gating, and native GitHub Actions `::error` annotations.
-
----
-
-## 📦 Installation & Quick Start
-
-You can run `compat-core` directly with `npx` without installing it permanently:
-
-```bash
-# Run a non-destructive dry-run analysis inside an OS temp sandbox
-npx @agency/compat-core --sandbox
-```
-
-Or install it globally / as a dev dependency:
-
-```bash
-# Global installation
-npm install -g @agency/compat-core
-
-#Local development dependency
-npm install --save-dev @agency/compat-core
-```
-
-## 🛠️ The 5-Tier Verification Pipeline
-
-Every proposed set of upgrades is evaluated against 5 successive verification tiers in order of execution cost:
-
-```
-[ Registry Scan & Solver ]
-           │
-           ▼
-[ Tier A: Package Installation ] (npm / pnpm / yarn / bun)
-           │
-           ▼
-[ Tier B: TypeScript Compilation ] (tsc --noEmit)
-           │
-           ▼
-[ Tier C: Production Bundler Build ] (next build, vite build, etc.)
-           │
-           ▼
-[ Tier E: Server Boot Smoke Test ] (Dynamic port boot & HTTP < 500 probe)
-           │
-           ▼
-[ Tier D: Test Suites / Route Crawler ] (npm test or autogenerated route crawler)
-```
-
-1. **Pre-Upgrade Baseline Check:** Validates your unmodified codebase first. If your app is already broken, `compat-core` aborts early to prevent false-positive blames.
-2. **Tier A (Installation):** Validates package manager resolution across `npm`, `pnpm`, `yarn` or `bun`.
-3. **Tier B (TypeScript Compilation):** Runs `tsc --noEmit` to verify that types and interfaces have not suffered breaking changes.
-4. **Tier C (Production Bundling):** Runs your `build` script to test bundlers (Turbopack, Webpack, Vite, Rollup, esbuild).
-5. **Tier E (Smoke Test):** Spawns your server on a dynamically allocated port, waits for readiness via stdout/stderr log parsing, and verifies HTTP response `< 500`.
-6. **Tier D (Test Suites):** Executes your native test suite (`npm test`). If no tests exist, it discovers static routes (`src/app`, `src/pages`) and crawls them using Node's native test runner (`node:test`).
+## 💡 The Solution
+`compat-core` eliminates dependency anxiety by acting as an automated staging gatekeeper:
+1. Scans upstream registries for available updates concurrently without triggering rate limits.
+2. Solves peer constraints and groups coupled libraries (like `react` + `react-dom`) into atomic transactions.
+3. Clones the project into an isolated sandbox (OS temporary directory or dedicated Git branch).
+4. Executes a rigorous **5-Tier Validation Pipeline**.
+5. Employs a **Binary Recursive Bisection Algorithm** if a batch upgrade fails, automatically isolating safe upgrades from broken ones.
+6. Inspects the codebase using the **TypeScript Compiler API (AST)** to flag `@deprecated` APIs introduced by major updates.
+7. Generates comprehensive audit reports and applies verified safe packages back to your project.
 
 ---
 
-## 📖 CLI Usage & Options
-
-```
-Usage:
-    compat-core [options]
-
-  --apply            Apply verified safe upgrades to package.json and sync lockfile
-  --restore          Undo the last applied upgrades, restoring original files
-  --sandbox          Run verification in an OS temp directory instead of Git branching
-  --patch-only       Only evaluate patch/bugfix upgrades (e.g. 1.0.0 -> 1.0.1)
-  --minor-only       Only evaluate minor and patch upgrades (e.g. 1.0.0 -> 1.1.0)
-  --json             Output machine-readable JSON results to stdout
-  --fail-on-blocked  Exit with code 1 if any upgrades are blocked (for CI/CD gating)
-  --skip-tests       Skip execution of tests (Tier D) during validation
-  --ignore-scripts   Ignore lifecycle scripts during dependency installation
-  -h, --help         Show this help message
-```
-
----
-
-## 💡 Practical Examples
-
-#### 1. **Dry-Run Analysis (Safe Scan)** <br>
-Analyze which packages are available for upgrade and verify if they pass all build and smoke without modifying your project files:
-
-```Bash
-compat-core --sandbox
-```
-
-#### 2. **Conservative Minor/Patch Upgrades Only** <br>
-Skip breaking major version upgrades (like Tailwind v3 → v4 or React 18 → 19) and only verify backwards-compatible updates:
-
-```Bash
-compat-core --sandbox --minor-only
-```
-
-#### 3. **Automatically Apply Verified Upgrades** <br>
-Verify all updates in the sandbox, and automatically apply only the safe ones to your local `package.json` and sync your lockfile:
-
-```Bash
-compat-core --sandbox --apply
-```
-
-#### 4. **Rolling Back an Upgrade** <br>
-If you ever need to undo an applied upgrade, restore your exact previous snapshot:
-
-```Bash
-compat-core --restore
-```
-
-#### 5. **Machine-Readable JSON Output** <br>
-Stream status logs to `stderr` while emitting pure, parsable JSON to `stdout` for scripts or file storage:
-
-```Bash
-# Save JSON report to file
-compat-core --sandbox --json > compat-summary.json
-
-# Parse summary with jq
-compat-core --sandbox --json | jq .summary
-```
-
----
-
-## 🤖 CI/CD Integration (GitHub Actions)
-You can run `compat-core` in your GitHub Actions pull request pipeline to block PRs that propose incompatible dependencies.
-
-Create `.github/workflows/dependency-check.yml`:
-
-```Yaml
-name: Dependency Compatibility Audit
-
-on:
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  compat-audit:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Run Compat-Core Audit
-        run: npx @agency/compat-core --sandbox --fail-on-blocked
-
-      - name: Upload Audit Markdown Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: compat-report
-          path: COMPAT_REPORT.md
-```
-_When running in GitHub Actions, `compat-core` automatically produces native **PR error annotations** identifying which packages failed during which tier._
-
----
-
-```Markdown
-## 📝 Generated Artifact: `COMPAT_REPORT.md`
-After every run, `compat-core` writes a detailed summary to `COMPAT_REPORT.md` in your project root:
-
-# Dependency Optimization Report
-
-Generated on: Tue, 01 Sep 2026 10:00:00 GMT
-Package Manager: **PNPM**
-Upgrade Scope: **FULL (MAJOR, MINOR, PATCH)**
-
-## Summary
-* **Safe Upgrades:** 3
-* **Blocked Upgrades:** 1
-* **Deprecated API Warnings:** 0
-
-## ✅ Verified Safe Upgrades
-The following upgrades compiled, built, and passed all test suites successfully:
-
-| Package | Current Range | Target Version | Update Type |
-| :--- | :--- | :--- | :--- |
-| `recharts` | `^2.15.0` | `2.15.4` | **PATCH** |
-| `lucide-react` | `^0.400.0` | `0.475.0` | **MINOR** |
-| `zod` | `^3.22.0` | `3.24.1` | **MINOR** |
-
-## ❌ Blocked Upgrades
-These packages failed validation checks and must be reviewed manually:
-
-### Group: `tailwindcss+autoprefixer`
-* **Failure Layer:** Tier C (Production Build)
-* **Diagnostics:**
+## 🏗️ Architecture & Verification Pipeline
 
 ```text
-Failed to compile.
-./src/app/globals.css
-Cannot find module '@tailwindcss/postcss'
-[ELIFECYCLE] Command failed with exit code 1.
-
-⚠️ Deprecated API Call Detections
-(None. Code matches upgrade deprecation patterns cleanly.)
+[ Manifest Scanned ]
+        │
+        ▼
+[ Registry Query Pool ] ──► (Concurrency Throttling: 10 parallel requests)
+        │
+        ▼
+[ Constraint Solver ] ────► (Atomic Unit Coupling & Peer Tree Analysis)
+        │
+        ▼
+[ Sandbox Spawn ] ────────► (OS Isolated Temp Directory or Git Branch)
+        │
+┌───────┴───────────────────────────────────────────────────────┐
+│              5-TIER MULTI-LAYER VALIDATION ENGINE              │
+├───────────────────────────────────────────────────────────────┤
+│ Tier A: Clean Dependency Installation & Lockfile Resolution   │
+│ Tier B: Static Type-Checking (tsc / mypy)                     │
+│ Tier C: Production Bundling & Build Verification              │
+│ Tier D: Autogenerated Route Crawling & Native Test Suites     │
+│ Tier E: Ephemeral Background Server Smoke Testing & Ping      │
+└───────────────────────────────┬───────────────────────────────┘
+                                │
+               ┌────────────────┴────────────────┐
+               ▼                                 ▼
+      [ Validation Passed ]             [ Validation Failed ]
+               │                                 │
+               ▼                                 ▼
+     [ AST Static Scanner ]             [ Recursive Bisection ]
+   (Flags @deprecated APIs)           (O(log N) Fault Isolation)
+               │                                 │
+               └────────────────┬────────────────┘
+                                │
+                                ▼
+                   [ COMPAT_REPORT.md Generated ]
 ```
+
+---
+
+## 🚀 Key Engineering Highlights
+
+### 1. Zero External Runtime Dependencies
+The core orchestration engine, CLI argument parser, HTTP concurrency queue, and semantic version comparator are built entirely on native Node.js APIs (`child_process`, `net`, `fs`, `fetch`, `node:test`).
+
+### 2. Recursive Bisection Algorithm (O(log N))
+When a "Big-Bang" full upgrade fails, `compat-core` does not give up. It bisects the proposed upgrade set into subsets ($L$ and $R$), recursively testing partitions in isolation to salvage every single package that is mutually compatible while pinpointing the exact failure layer of incompatible packages.
+
+### 3. Dynamic Route Discovery & Smoke Testing
+Detects Next.js (App & Pages Router) page structures dynamically, spins up the production server on an OS-allocated ephemeral port, writes an in-memory `node:test` suite, and crawls every static page route to verify HTTP `< 500` status before approving upgrades.
+
+### 4. Compiler-Level AST Deprecation Scanning
+Loads the target project's TypeScript compiler (`typescript.js`) in-memory, parses project source files into Abstract Syntax Trees (ASTs), and queries the TypeChecker for `@deprecated` JSDoc annotations originating from upgraded packages.
+
+### 5. Polyglot Architecture
+Pluggable stack adapters support diverse ecosystems:
+- **Node.js**: Full lifecycle support across `npm`, `pnpm`, `yarn`, and `bun`.
+- **Python**: Virtual environment management (`.venv`), PyPI querying, `mypy`, and `pytest`.
+- **Static Sites**: Lightweight manifest tracking, integrity checks, and local web server boot validation.
+
+---
+
+## 💻 Quick Start & Usage
+
+Run directly on any project using `npx`:
+
+```bash
+# Safe Dry-Run (runs in an isolated OS temporary directory)
+npx compat-core --sandbox
+
+# Automatically verify and apply safe upgrades to package.json & lockfile
+npx compat-core --sandbox --apply
+
+# Undo the last applied upgrade if needed
+npx compat-core --restore
+```
+
+### CLI Options
+
+| Option | Description |
+| :--- | :--- |
+| `--sandbox` | Run verification in an isolated OS temp folder instead of Git branching. |
+| `--apply` | Write verified upgrades back to the project manifest and re-sync lockfiles. |
+| `--restore` | Rollback project to the pre-upgrade snapshot stored in `.compat-backup.json`. |
+| `--skip-tests` | Skip Tier D test execution if tests require external services (e.g. databases). |
+| `--ignore-scripts` | Pass `--ignore-scripts` to package managers during install verification. |
+| `-h, --help` | Show CLI help message and usage manual. |
 
 ---
 
 ## 📄 License
-
-MIT © Agency
+This project is open-source and licensed under the [MIT License](LICENSE).

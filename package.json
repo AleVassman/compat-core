@@ -1,8 +1,9 @@
 {
-  "name": "@agency/compat-core",
+  "name": "compat-core",
   "version": "1.0.0",
-  "description": "Full-Sweep Dependency Optimizer: Multi-tier validation, recursive bisection, AST deprecation scanning, and zero runtime dependencies.",
+  "description": "Autonomous multi-stack dependency compatibility validator & upgrade engine with recursive bisection and AST deprecation scanning.",
   "type": "module",
+  "author": "Alexandhros Vassalos Manolitsis",
   "main": "./src/index.js",
   "bin": {
     "compat-core": "./bin/cli.js"
